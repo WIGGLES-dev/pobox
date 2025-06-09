@@ -1,0 +1,12 @@
+[package]
+name = "mailbox_macros"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1"
+syn = { version = "1", features = ["full"] }
+quote = { version = "1" }

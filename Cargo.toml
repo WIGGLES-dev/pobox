@@ -1,0 +1,19 @@
+[package]
+name = "pobox"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "1", default-features = false, features = ["sync"] }
+mailbox_macros = { path = "./macros" }
+serde = { version = "1", features = ["derive"] }
+wasm-bindgen = { version = "0.2.100", optional = true }
+
+[features]
+default = ["simd"]
+simd = []
+view = []
+web = ["dep:wasm-bindgen"]
+
+[workspace]
+members = ["./macros"]
