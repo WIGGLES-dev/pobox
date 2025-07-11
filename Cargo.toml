@@ -4,16 +4,42 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-tokio = { version = "1", default-features = false, features = ["sync"] }
-mailbox_macros = { path = "./macros" }
-serde = { version = "1", features = ["derive"] }
+log = "0.4"
+tokio_with_wasm = { version = "0.8", features = [
+	"sync",
+	"rt",
+], optional = true }
+tokio = { version = "1", default-features = false, features = [
+	"sync",
+	"rt",
+], optional = true }
+futures-util = { version = "0.3" }
+tokio-stream = { version = "0.1", optional = true }
+pobox_macros = { path = "./macros" }
+serde = { version = "1", features = ["derive"], optional = true }
 wasm-bindgen = { version = "0.2.100", optional = true }
+tower = { version = "0.5", optional = true }
+axum = { version = "0.8", optional = true }
+codee = { version = "0.3", optional = true }
+anyhow = { version = "1" }
+kanal = { version = "0.1", optional = true }
+
 
 [features]
-default = ["simd"]
-simd = []
+default = ["serde"]
 view = []
-web = ["dep:wasm-bindgen"]
+web = ["dep:wasm-bindgen", "pobox_macros/web"]
+serde = ["dep:serde", "pobox_macros/serde"]
+tokio = ["dep:tokio", "dep:tokio-stream"]
+tower = ["dep:tower"]
+axum = ["dep:axum", "tower"]
+axum-ws = ["axum/ws"]
+transport = ["serde", "tower", "dep:codee"]
+kanal = ["dep:kanal"]
 
 [workspace]
 members = ["./macros"]
+
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+wasm-bindgen = { version = "0.2" }

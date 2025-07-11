@@ -1,8 +1,9 @@
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{
-    Block, FnArg, Ident, ImplItem, ImplItemMethod, ItemImpl, Pat, PatIdent, PatType, Receiver,
-    Signature, Token, Type, TypeReference, Visibility, parse_quote,
+    Block, FnArg, Ident, ImplItem, ImplItemMethod, ItemImpl, ItemTrait, Pat, PatIdent, PatType,
+    Receiver, Signature, Token, TraitItem, Type, TypeParamBound, TypeReference, Visibility,
+    parse_quote,
     token::{And, Mut},
 };
 
@@ -32,6 +33,11 @@ fn recursively_replace_ref_in_pat(ref_bindings: &mut Vec<Ident>, pat: &mut Pat) 
 /// unfortunately there's not way to reasonable express struct destructuring where some fields are mutably borrowed
 /// and others are immutably borrows
 pub fn strip_method(method: &mut ImplItemMethod) -> Vec<Ident> {
+    method.attrs = method
+        .attrs
+        .drain(0..)
+        .filter(|attr| !attr.path.is_ident("pobox"))
+        .collect();
     let first_arg = &mut method.sig.inputs[0];
     let mut bindings = vec![];
     match first_arg {
@@ -141,6 +147,60 @@ pub fn strip_impl(item: &mut ItemImpl) {
     }
     item.items
         .extend(extra_items.drain(0..).map(|item| ImplItem::Method(item)));
+}
+
+pub fn strip_trait(item: &mut ItemTrait) {
+    for supertrait in &mut item.supertraits {
+        match supertrait {
+            TypeParamBound::Trait(trait_) => {}
+            _ => {}
+        }
+    }
+    item.items = item
+        .items
+        .drain(0..)
+        .filter_map(|item| match item {
+            TraitItem::Method(mut method) => {
+                method.attrs = method
+                    .attrs
+                    .drain(0..)
+                    .into_iter()
+                    .filter(|attr| !attr.path.is_ident("pobox"))
+                    .collect();
+
+                for input in method.sig.inputs.iter_mut() {
+                    let attrs = match input {
+                        FnArg::Receiver(receiver) => &mut receiver.attrs,
+                        FnArg::Typed(pat) => &mut pat.attrs,
+                    };
+                    *attrs = attrs
+                        .drain(0..)
+                        .into_iter()
+                        .filter(|attr| !attr.path.is_ident("pobox"))
+                        .collect();
+                }
+
+                Some(TraitItem::Method(method))
+            }
+            TraitItem::Type(mut ty) => {
+                ty.attrs = ty
+                    .attrs
+                    .drain(0..)
+                    .into_iter()
+                    .filter(|attr| !attr.path.is_ident("pobox"))
+                    .collect();
+                Some(TraitItem::Type(ty))
+            }
+            TraitItem::Macro(mac) => {
+                if mac.mac.path.is_ident("delegate") {
+                    return None;
+                } else {
+                    Some(TraitItem::Macro(mac))
+                }
+            }
+            item => Some(item),
+        })
+        .collect();
 }
 
 pub fn get_simple_impl_forwarding_name(sig: &Signature) -> impl Iterator<Item = (bool, Ident)> {
