@@ -30,12 +30,15 @@ default = ["serde"]
 view = []
 web = ["dep:wasm-bindgen", "pobox_macros/web"]
 serde = ["dep:serde", "pobox_macros/serde"]
+
+
+transport = ["serde", "tower", "dep:codee"]
+kanal = ["dep:kanal"]
+
 tokio = ["dep:tokio", "dep:tokio-stream"]
 tower = ["dep:tower"]
 axum = ["dep:axum", "tower"]
-axum-ws = ["axum/ws"]
-transport = ["serde", "tower", "dep:codee"]
-kanal = ["dep:kanal"]
+axum-ws = ["axum", "axum/ws"]
 
 [workspace]
 members = ["./macros"]

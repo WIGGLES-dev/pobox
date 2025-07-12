@@ -1,28 +1,64 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 #![feature(coroutines)]
 #![feature(coroutine_trait)]
 #![feature(stmt_expr_attributes)]
 #![feature(macro_metavar_expr_concat)]
+#![feature(impl_trait_in_assoc_type)]
 
-use std::ops::Coroutine;
+use pobox::{tokio::TokioMailbox, *};
 
-use pobox::*;
-use serde::{Deserialize, Serialize};
+fn main() {
+    let (mailbox, receiver) = TokioMailbox::bounded(100);
+    let actor_state = Todos {};
 
-fn main() {}
-
-message! {
-    #[derive(Deserialize, Serialize)]
-    pub Todos<O: Output> {
-        TodosSince { since: String } -> String,
-        OpenTodos -> String
-    }
+    let mut actor_ref = ActorRef::<Todos, TodosService>::new(mailbox);
 }
 
-pub trait TodosActorArgs<O> {}
-fn todos_actor<O>(args: impl TodosActorArgs<O>) -> impl Coroutine<Todos<O>, Yield = ()>
+struct Todos {}
+impl Actor for Todos {
+    type Mailbox<'a, S> = TokioMailbox<S>;
+}
+
+struct AddTodo {}
+impl HasReply<AddTodo> for Todos {
+    type Reply = ();
+}
+impl<S> Mutation<AddTodo, S> for Todos {
+    fn handle(&mut self, msg: AddTodo) -> Self::Reply {}
+}
+
+pub struct RemoveTodo {}
+impl HasReply<RemoveTodo> for Todos {
+    type Reply = ();
+}
+
+impl<S> Mutation<RemoveTodo, S> for Todos
 where
-    O: TodosOutput,
+    // we use this to make sure the message GetOpenTodos is sendable to Todos
+    GetOpenTodos: ServiceMember<S>,
 {
-    #[coroutine]
-    |msg| {}
+    fn handle(&mut self, msg: RemoveTodo) -> Self::Reply {}
+}
+
+pub struct GetOpenTodos {}
+impl HasReply<GetOpenTodos> for Todos {
+    type Reply = ();
+}
+
+impl<S> Query<GetOpenTodos, S> for Todos {
+    fn handle(&self, q: GetOpenTodos) -> Self::Reply {}
+}
+
+service! {
+    TodosService {
+        Queries {
+            GetOpenTodos,
+        }
+        Mutations {
+            AddTodo,
+            RemoveTodo,
+        }
+    }
 }
